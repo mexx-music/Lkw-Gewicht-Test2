@@ -49,3 +49,16 @@ st.write(f"🔢 Methode: **{methode}**")
 st.write(f"🚛 Zugmaschine (geschätzt): **{real_antrieb:.2f} t**")
 st.write(f"🛻 Auflieger (geschätzt): **{real_auflieger:.2f} t**")
 st.write(f"📦 Gesamtgewicht: **{gesamtgewicht:.2f} t**")
+# Maximale Achslast laut EU-Richtlinie
+MAX_ANTRIEBSACHSE = 11.5  # in Tonnen
+
+# Berechnung der Überladung
+ueberladung_kg = max(0, (real_antrieb - MAX_ANTRIEBSACHSE) * 1000)
+ueberladung_prozent = max(0, (real_antrieb - MAX_ANTRIEBSACHSE) / MAX_ANTRIEBSACHSE * 100)
+
+st.header("⚖️ Achslast-Kontrolle")
+
+if ueberladung_kg > 0:
+    st.error(f"⚠️ Antriebsachse überladen: **{ueberladung_kg:.0f} kg** / **{ueberladung_prozent:.1f} %** über dem Limit!")
+else:
+    st.success("✅ Antriebsachse im grünen Bereich")
