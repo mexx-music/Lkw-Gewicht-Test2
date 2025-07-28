@@ -7,20 +7,35 @@ st.title("🚛 LKW-Gewicht aus Volvo-Anzeige")
 
 DATEI = "kalibrierung.json"
 
-# Startwerte – geschätzt
-default_values = {
-    "leer_volvo_antrieb": 4.7,
-    "leer_real_antrieb": 7.5,
-    "voll_volvo_antrieb": 7.9,
-    "voll_real_antrieb": 11.3,
-    "leer_volvo_auflieger": 6.6,
-    "leer_real_auflieger": 8.5,
-    "voll_volvo_auflieger": 19.0,
-    "voll_real_auflieger": 27.5,
-    "teilbeladung_volvo_antrieb": 0.0,
-    "teilbeladung_real_antrieb": 0.0,
-    "teilbeladung_volvo_auflieger": 0.0,
-    "teilbeladung_real_auflieger": 0.0
+fahrzeug_modelle = {
+    "Volvo FH500": {
+        "leer_volvo_antrieb": 4.7,
+        "leer_real_antrieb": 7.5,
+        "voll_volvo_antrieb": 7.9,
+        "voll_real_antrieb": 11.3,
+        "leer_volvo_auflieger": 6.6,
+        "leer_real_auflieger": 8.5,
+        "voll_volvo_auflieger": 19.0,
+        "voll_real_auflieger": 27.5,
+        "teilbeladung_volvo_antrieb": 0.0,
+        "teilbeladung_real_antrieb": 0.0,
+        "teilbeladung_volvo_auflieger": 0.0,
+        "teilbeladung_real_auflieger": 0.0
+    },
+    "Eigenes Modell (manuell)": {
+        "leer_volvo_antrieb": 0.0,
+        "leer_real_antrieb": 0.0,
+        "voll_volvo_antrieb": 0.0,
+        "voll_real_antrieb": 0.0,
+        "leer_volvo_auflieger": 0.0,
+        "leer_real_auflieger": 0.0,
+        "voll_volvo_auflieger": 0.0,
+        "voll_real_auflieger": 0.0,
+        "teilbeladung_volvo_antrieb": 0.0,
+        "teilbeladung_real_antrieb": 0.0,
+        "teilbeladung_volvo_auflieger": 0.0,
+        "teilbeladung_real_auflieger": 0.0
+    }
 }
 
 def lade_daten():
@@ -35,7 +50,6 @@ def speichere_daten(daten):
 
 def berechne_kalibrierung(volvo1, real1, volvo2, real2, optional_volvo=0.0, optional_real=0.0):
     if optional_volvo > 0 and optional_real > 0:
-        # Drei-Punkt-Kalibrierung über lineare Regression
         x = [volvo1, optional_volvo, volvo2]
         y = [real1, optional_real, real2]
         xm = sum(x) / 3
@@ -50,9 +64,15 @@ def berechne_kalibrierung(volvo1, real1, volvo2, real2, optional_volvo=0.0, opti
         b = real1 - a * volvo1
         return a, b
 
+# Auswahl des Modells
+st.header("🚛 Modell-Auswahl")
+modell = st.selectbox("Fahrzeugmodell auswählen", list(fahrzeug_modelle.keys()))
+vorgabe_daten = fahrzeug_modelle[modell]
+
+# Kennzeichen
 kennzeichen = st.text_input("Kennzeichen eingeben:", value="W-12345")
 alle_daten = lade_daten()
-daten = alle_daten.get(kennzeichen, default_values)
+daten = alle_daten.get(kennzeichen, vorgabe_daten)
 
 st.header("🔧 Kalibrierung – Leer, Voll, Teilbeladung")
 
@@ -95,7 +115,6 @@ st.header("📥 Eingabe aktueller Volvo-Werte")
 volvo_now_antrieb = st.number_input("Aktuelle Volvo-Anzeige – Zugmaschine", value=voll_volvo_antrieb)
 volvo_now_auflieger = st.number_input("Aktuelle Volvo-Anzeige – Auflieger", value=voll_volvo_auflieger)
 
-# Umrechnung
 a1, b1 = berechne_kalibrierung(leer_volvo_antrieb, leer_real_antrieb, voll_volvo_antrieb, voll_real_antrieb, teilbeladung_volvo_antrieb, teilbeladung_real_antrieb)
 a2, b2 = berechne_kalibrierung(leer_volvo_auflieger, leer_real_auflieger, voll_volvo_auflieger, voll_real_auflieger, teilbeladung_volvo_auflieger, teilbeladung_real_auflieger)
 
@@ -109,7 +128,6 @@ st.write(f"🚛 Zugmaschine: **{real_antrieb:.2f} t**")
 st.write(f"🛻 Auflieger: **{real_auflieger:.2f} t**")
 st.write(f"📦 Gesamtgewicht: **{real_gesamt:.2f} t**")
 
-# Überladung anzeigen
 MAX_ANTRIEBSACHSE = 11.5
 ueberladung_kg = max(0, (real_antrieb - MAX_ANTRIEBSACHSE) * 1000)
 ueberladung_prozent = max(0, (real_antrieb - MAX_ANTRIEBSACHSE) / MAX_ANTRIEBSACHSE * 100)
@@ -119,4 +137,4 @@ if ueberladung_kg > 0:
 else:
     st.success("✅ Antriebsachse im grünen Bereich")
 
-st.info("ℹ️ Hinweis: Teilbeladung ist optional – Felder leer lassen oder 0 eingeben, wenn keine Mittelwerte vorhanden sind.")
+st.info("ℹ️ Teilbeladung ist optional – bei Nichtverwendung einfach auf 0 lassen.")
