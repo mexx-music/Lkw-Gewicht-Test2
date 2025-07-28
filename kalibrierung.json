@@ -1,17 +1,16 @@
 {
-    "Volvo-Ungarn": {
-        "leer": {
-            "zug": 4.7,
-            "trailer": 6.6,
-            "real_zug": 7.45,
-            "real_trailer": 12.8
-        },
-        "voll": {
-            "zug": 12.1,
-            "trailer": 19.7,
-            "real_zug": 13.15,
-            "real_trailer": 12.8
-        },
-        "aktiv": true
-    }
+  "Volvo-Ungarn": {
+    "leer_volvo_antrieb": 4.7,
+    "leer_real_antrieb": 7.5,
+    "voll_volvo_antrieb": 7.9,
+    "voll_real_antrieb": 11.3,
+    "teilbeladung_volvo_antrieb": 0.0,
+    "teilbeladung_real_antrieb": 0.0,
+    "leer_volvo_auflieger": 6.6,
+    "leer_real_auflieger": 8.5,
+    "voll_volvo_auflieger": 19.0,
+    "voll_real_auflieger": 27.5,
+    "teilbeladung_volvo_auflieger": 0.0,
+    "teilbeladung_real_auflieger": 0.0
+  }
 }
