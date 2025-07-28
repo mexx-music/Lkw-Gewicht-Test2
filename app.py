@@ -7,6 +7,7 @@ st.title("🚛 LKW-Gewicht aus Volvo-Anzeige")
 
 DATEI = "kalibrierung.json"
 
+# Startwerte – geschätzt
 default_values = {
     "leer_volvo_antrieb": 4.7,
     "leer_real_antrieb": 7.5,
@@ -88,6 +89,8 @@ if st.button("💾 Kalibrierung speichern"):
     speichere_daten(alle_daten)
     st.success("✅ Kalibrierung gespeichert")
 
+st.header("📥 Eingabe aktueller Volvo-Werte")
+
 volvo_now_antrieb = st.number_input("Aktuelle Volvo-Anzeige – Zugmaschine", value=voll_volvo_antrieb)
 volvo_now_auflieger = st.number_input("Aktuelle Volvo-Anzeige – Auflieger", value=voll_volvo_auflieger)
 
@@ -103,3 +106,14 @@ st.header("📊 Ergebnis")
 st.write(f"🚛 Zugmaschine: **{real_antrieb:.2f} t**")
 st.write(f"🛻 Auflieger: **{real_auflieger:.2f} t**")
 st.write(f"📦 Gesamtgewicht: **{real_gesamt:.2f} t**")
+
+MAX_ANTRIEBSACHSE = 11.5
+ueberladung_kg = max(0, (real_antrieb - MAX_ANTRIEBSACHSE) * 1000)
+ueberladung_prozent = max(0, (real_antrieb - MAX_ANTRIEBSACHSE) / MAX_ANTRIEBSACHSE * 100)
+
+if ueberladung_kg > 0:
+    st.error(f"⚠️ Antriebsachse überladen: **{ueberladung_kg:.0f} kg** / **{ueberladung_prozent:.1f} %** über dem Limit!")
+else:
+    st.success("✅ Antriebsachse im grünen Bereich")
+
+st.info("ℹ️ Hinweis: Teilbeladung ist optional – Felder leer lassen oder 0 eingeben, wenn keine Mittelwerte vorhanden sind.")
