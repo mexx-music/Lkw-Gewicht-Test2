@@ -1,46 +1,105 @@
 import streamlit as st
 import json
+import os
 
-st.set_page_config(page_title="LKW-Gewicht Rechner", page_icon="🚛")
+st.set_page_config(page_title="LKW Gewicht Rechner", page_icon="🚛")
+st.title("🚛 LKW-Gewicht aus Volvo-Anzeige")
 
-# Kalibrierdaten laden
-with open("kalibrierung.json", "r") as f:
-    kalibrierungen = json.load(f)
+DATEI = "kalibrierung.json"
 
-modelle = list(kalibrierungen.keys())
-modell = st.selectbox("🚛 Fahrzeugmodell auswählen / wechseln", modelle)
+default_values = {
+    "leer_volvo_antrieb": 4.7,
+    "leer_real_antrieb": 7.5,
+    "voll_volvo_antrieb": 7.9,
+    "voll_real_antrieb": 11.3,
+    "leer_volvo_auflieger": 6.6,
+    "leer_real_auflieger": 8.5,
+    "voll_volvo_auflieger": 19.0,
+    "voll_real_auflieger": 27.5,
+    "teilbeladung_volvo_antrieb": 0.0,
+    "teilbeladung_real_antrieb": 0.0,
+    "teilbeladung_volvo_auflieger": 0.0,
+    "teilbeladung_real_auflieger": 0.0
+}
 
-daten = kalibrierungen[modell]
+def lade_daten():
+    if os.path.exists(DATEI):
+        with open(DATEI, "r") as f:
+            return json.load(f)
+    return {}
 
-volvo_now_zug = st.number_input("Aktuelle Volvo-Anzeige – Zugmaschine", value=0.0)
-volvo_now_trailer = st.number_input("Aktuelle Volvo-Anzeige – Auflieger", value=0.0)
+def speichere_daten(daten):
+    with open(DATEI, "w") as f:
+        json.dump(daten, f)
 
-leer_volvo_antrieb = daten["leer_volvo_antrieb"]
-leer_real_antrieb = daten["leer_real_antrieb"]
-voll_volvo_antrieb = daten["voll_volvo_antrieb"]
-voll_real_antrieb = daten["voll_real_antrieb"]
+def berechne_kalibrierung(volvo1, real1, volvo2, real2, optional_volvo=0.0, optional_real=0.0):
+    if optional_volvo > 0 and optional_real > 0:
+        x = [volvo1, optional_volvo, volvo2]
+        y = [real1, optional_real, real2]
+        xm = sum(x) / 3
+        ym = sum(y) / 3
+        a = sum((x[i] - xm)*(y[i] - ym) for i in range(3)) / sum((x[i] - xm)**2 for i in range(3))
+        b = ym - a * xm
+        return a, b
+    elif volvo2 - volvo1 == 0:
+        return 1.0, 0.0
+    else:
+        a = (real2 - real1) / (volvo2 - volvo1)
+        b = real1 - a * volvo1
+        return a, b
 
-leer_volvo_auflieger = daten["leer_volvo_auflieger"]
-leer_real_auflieger = daten["leer_real_auflieger"]
-voll_volvo_auflieger = daten["voll_volvo_auflieger"]
-voll_real_auflieger = daten["voll_real_auflieger"]
+kennzeichen = st.text_input("Kennzeichen eingeben:", value="W-12345")
+alle_daten = lade_daten()
+daten = alle_daten.get(kennzeichen, default_values)
 
-# Lineare Umrechnung
-def berechne_gewicht(volvo_wert, leer_volvo, leer_real, voll_volvo, voll_real):
-    if voll_volvo == leer_volvo:
-        return 0
-    faktor = (voll_real - leer_real) / (voll_volvo - leer_volvo)
-    return round(leer_real + faktor * (volvo_wert - leer_volvo), 2)
+st.header("🔧 Kalibrierung – Leer, Voll, Teilbeladung")
 
-gewicht_zug = berechne_gewicht(volvo_now_zug, leer_volvo_antrieb, leer_real_antrieb, voll_volvo_antrieb, voll_real_antrieb)
-gewicht_trailer = berechne_gewicht(volvo_now_trailer, leer_volvo_auflieger, leer_real_auflieger, voll_volvo_auflieger, voll_real_auflieger)
-gesamtgewicht = round(gewicht_zug + gewicht_trailer, 2)
+with st.expander("Zugmaschine (Antriebsachse)"):
+    leer_volvo_antrieb = st.number_input("Volvo Anzeige leer (Zugmaschine)", value=daten["leer_volvo_antrieb"])
+    leer_real_antrieb = st.number_input("Waage leer (Zugmaschine)", value=daten["leer_real_antrieb"])
+    voll_volvo_antrieb = st.number_input("Volvo Anzeige voll (Zugmaschine)", value=daten["voll_volvo_antrieb"])
+    voll_real_antrieb = st.number_input("Waage voll (Zugmaschine)", value=daten["voll_real_antrieb"])
+    teilbeladung_volvo_antrieb = st.number_input("Volvo Anzeige teilbeladen (Zugmaschine)", value=daten["teilbeladung_volvo_antrieb"])
+    teilbeladung_real_antrieb = st.number_input("Waage teilbeladen (Zugmaschine)", value=daten["teilbeladung_real_antrieb"])
 
-st.markdown("## 📊 Ergebnis")
-st.markdown(f"🚚 Zugmaschine: **{gewicht_zug} t**")
-st.markdown(f"🚛 Auflieger: **{gewicht_trailer} t**")
-st.markdown(f"📦 Gesamtgewicht: **{gesamtgewicht} t**")
+with st.expander("Auflieger"):
+    leer_volvo_auflieger = st.number_input("Volvo Anzeige leer (Auflieger)", value=daten["leer_volvo_auflieger"])
+    leer_real_auflieger = st.number_input("Waage leer (Auflieger)", value=daten["leer_real_auflieger"])
+    voll_volvo_auflieger = st.number_input("Volvo Anzeige voll (Auflieger)", value=daten["voll_volvo_auflieger"])
+    voll_real_auflieger = st.number_input("Waage voll (Auflieger)", value=daten["voll_real_auflieger"])
+    teilbeladung_volvo_auflieger = st.number_input("Volvo Anzeige teilbeladen (Auflieger)", value=daten["teilbeladung_volvo_auflieger"])
+    teilbeladung_real_auflieger = st.number_input("Waage teilbeladen (Auflieger)", value=daten["teilbeladung_real_auflieger"])
 
-if gewicht_zug > 11.5:
-    overload = round((gewicht_zug - 11.5) * 1000)
-    st.error(f"⚠️ Antriebsachse überladen: {overload} kg / {round(overload / 11500 * 100, 1)} % über dem Limit!")
+if st.button("💾 Kalibrierung speichern"):
+    alle_daten[kennzeichen] = {
+        "leer_volvo_antrieb": leer_volvo_antrieb,
+        "leer_real_antrieb": leer_real_antrieb,
+        "voll_volvo_antrieb": voll_volvo_antrieb,
+        "voll_real_antrieb": voll_real_antrieb,
+        "teilbeladung_volvo_antrieb": teilbeladung_volvo_antrieb,
+        "teilbeladung_real_antrieb": teilbeladung_real_antrieb,
+        "leer_volvo_auflieger": leer_volvo_auflieger,
+        "leer_real_auflieger": leer_real_auflieger,
+        "voll_volvo_auflieger": voll_volvo_auflieger,
+        "voll_real_auflieger": voll_real_auflieger,
+        "teilbeladung_volvo_auflieger": teilbeladung_volvo_auflieger,
+        "teilbeladung_real_auflieger": teilbeladung_real_auflieger
+    }
+    speichere_daten(alle_daten)
+    st.success("✅ Kalibrierung gespeichert")
+
+volvo_now_antrieb = st.number_input("Aktuelle Volvo-Anzeige – Zugmaschine", value=voll_volvo_antrieb)
+volvo_now_auflieger = st.number_input("Aktuelle Volvo-Anzeige – Auflieger", value=voll_volvo_auflieger)
+
+a1, b1 = berechne_kalibrierung(leer_volvo_antrieb, leer_real_antrieb, voll_volvo_antrieb, voll_real_antrieb, teilbeladung_volvo_antrieb, teilbeladung_real_antrieb)
+a2, b2 = berechne_kalibrierung(leer_volvo_auflieger, leer_real_auflieger, voll_volvo_auflieger, voll_real_auflieger, teilbeladung_volvo_auflieger, teilbeladung_real_auflieger)
+
+real_antrieb = volvo_now_antrieb * a1 + b1
+real_auflieger = volvo_now_auflieger * a2 + b2
+real_gesamt = real_antrieb + real_auflieger
+
+st.header("📊 Ergebnis")
+
+st.write(f"🚛 Zugmaschine: **{real_antrieb:.2f} t**")
+st.write(f"🛻 Auflieger: **{real_auflieger:.2f} t**")
+st.write(f"📦 Gesamtgewicht: **{real_gesamt:.2f} t**")
