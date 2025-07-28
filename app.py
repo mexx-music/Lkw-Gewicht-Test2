@@ -7,6 +7,7 @@ st.title("🚛 LKW-Gewicht aus Volvo-Anzeige")
 
 DATEI = "kalibrierung.json"
 
+# Standardwerte, wenn keine Kalibrierung vorhanden
 default_values = {
     "leer_volvo_antrieb": 4.7,
     "leer_real_antrieb": 7.5,
