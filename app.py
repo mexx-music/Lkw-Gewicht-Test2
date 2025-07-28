@@ -1,91 +1,53 @@
 import streamlit as st
 import json
-import os
 
-st.set_page_config(page_title="LKW Gewicht Rechner", page_icon="🚛")
-st.title("🚛 LKW-Gewicht aus Volvo-Anzeige")
+# JSON-Datei laden
+with open("kalibrierung.json", "r") as f:
+    kalibrierung = json.load(f)
 
-DATEI = "kalibrierung.json"
+# Fahrzeugmodell auswählen
+modell = st.selectbox("🚛 Fahrzeugmodell auswählen / wechseln", list(kalibrierung.keys()))
+daten = kalibrierung[modell]
 
-# Startwerte – geschätzt
-default_values = {
-    "leer": {
-        "zug": 4.7,
-        "trailer": 6.6,
-        "real_zug": 7.5,
-        "real_trailer": 8.5
-    },
-    "voll": {
-        "zug": 7.9,
-        "trailer": 19.0,
-        "real_zug": 11.3,
-        "real_trailer": 27.5
-    },
-    "aktiv": True
-}
+st.header("📬 Eingabe aktueller Volvo-Werte")
 
-def lade_daten():
-    if os.path.exists(DATEI):
-        with open(DATEI, "r") as f:
-            return json.load(f)
-    return {}
+# Eingabe aktuelle Volvo-Werte
+volvo_now_zug = st.number_input("Aktuelle Volvo-Anzeige – Zugmaschine", value=0.0)
+volvo_now_trailer = st.number_input("Aktuelle Volvo-Anzeige – Auflieger", value=0.0)
 
-def speichere_daten(daten):
-    with open(DATEI, "w") as f:
-        json.dump(daten, f, indent=4)
+# Kalibrierungswerte laden
+leer_volvo_zug = daten["leer_volvo_antrieb"]
+leer_real_zug = daten["leer_real_antrieb"]
+voll_volvo_zug = daten["voll_volvo_antrieb"]
+voll_real_zug = daten["voll_real_antrieb"]
 
-def berechne_kalibrierung(volvo1, real1, volvo2, real2):
-    if volvo2 - volvo1 == 0:
-        return 1.0, 0.0
-    a = (real2 - real1) / (volvo2 - volvo1)
-    b = real1 - a * volvo1
-    return a, b
+leer_volvo_trailer = daten["leer_volvo_auflieger"]
+leer_real_trailer = daten["leer_real_auflieger"]
+voll_volvo_trailer = daten["voll_volvo_auflieger"]
+voll_real_trailer = daten["voll_real_auflieger"]
 
-alle_daten = lade_daten()
+# Umrechnungsformel (lineare Interpolation)
+def berechne_gewicht(volvo_wert, leer_volvo, leer_real, voll_volvo, voll_real):
+    if voll_volvo == leer_volvo:
+        return leer_real
+    return leer_real + (voll_real - leer_real) * ((volvo_wert - leer_volvo) / (voll_volvo - leer_volvo))
 
-with st.expander("🚚 Fahrzeugmodell auswählen / wechseln"):
-    modelle = list(alle_daten.keys())
-    if not modelle:
-        st.warning("⚠️ Noch keine Modelle vorhanden. Bitte zuerst ein Modell eingeben und speichern.")
-        aktuelles_modell = None
-    else:
-        aktuelles_modell = st.selectbox("Modell auswählen:", modelle)
-        # Setze ausgewähltes Modell auf aktiv
-        for modell in alle_daten:
-            alle_daten[modell]["aktiv"] = (modell == aktuelles_modell)
-        speichere_daten(alle_daten)
+# Gewichte berechnen
+gewicht_zug = berechne_gewicht(volvo_now_zug, leer_volvo_zug, leer_real_zug, voll_volvo_zug, voll_real_zug)
+gewicht_trailer = berechne_gewicht(volvo_now_trailer, leer_volvo_trailer, leer_real_trailer, voll_volvo_trailer, voll_real_trailer)
+gesamtgewicht = gewicht_zug + gewicht_trailer
 
-# Falls keine Modelle vorhanden sind, abbrechen
-if not aktuelles_modell:
-    st.stop()
-
-daten = alle_daten[aktuelles_modell]
-
-st.header("📥 Eingabe aktueller Volvo-Werte")
-
-volvo_now_zug = st.number_input("Aktuelle Volvo-Anzeige – Zugmaschine", value=daten["voll"]["zug"])
-volvo_now_trailer = st.number_input("Aktuelle Volvo-Anzeige – Auflieger", value=daten["voll"]["trailer"])
-
-a1, b1 = berechne_kalibrierung(daten["leer"]["zug"], daten["leer"]["real_zug"],
-                               daten["voll"]["zug"], daten["voll"]["real_zug"])
-a2, b2 = berechne_kalibrierung(daten["leer"]["trailer"], daten["leer"]["real_trailer"],
-                               daten["voll"]["trailer"], daten["voll"]["real_trailer"])
-
-real_zug = volvo_now_zug * a1 + b1
-real_trailer = volvo_now_trailer * a2 + b2
-real_gesamt = real_zug + real_trailer
-
+# Ergebnis anzeigen
 st.header("📊 Ergebnis")
+st.markdown(f"🚛 Zugmaschine: **{gewicht_zug:.2f} t**")
+st.markdown(f"🚚 Auflieger: **{gewicht_trailer:.2f} t**")
+st.markdown(f"📦 Gesamtgewicht: **{gesamtgewicht:.2f} t**")
 
-st.write(f"🚛 Zugmaschine: **{real_zug:.2f} t**")
-st.write(f"🛻 Auflieger: **{real_trailer:.2f} t**")
-st.write(f"📦 Gesamtgewicht: **{real_gesamt:.2f} t**")
-
-MAX_ANTRIEBSACHSE = 11.5
-ueberladung_kg = max(0, (real_zug - MAX_ANTRIEBSACHSE) * 1000)
-ueberladung_prozent = max(0, (real_zug - MAX_ANTRIEBSACHSE) / MAX_ANTRIEBSACHSE * 100)
-
-if ueberladung_kg > 0:
-    st.error(f"⚠️ Antriebsachse überladen: **{ueberladung_kg:.0f} kg** / **{ueberladung_prozent:.1f} %** über dem Limit!")
+# Überladung prüfen
+grenze = 11.5  # Antriebsachse max 11.5 t
+if gewicht_zug > grenze:
+    ueber = gewicht_zug - grenze
+    prozent = (ueber / grenze) * 100
+    st.error(f"⚠️ Antriebsachse überladen: {ueber*1000:.0f} kg / {prozent:.1f} % über dem Limit!")
 else:
-    st.success("✅ Antriebsachse im grünen Bereich")
+    st.success("✅ Antriebsachse im grünen Bereich.")
