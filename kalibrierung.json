@@ -1,0 +1,17 @@
+{
+    "Volvo-Test": {
+        "leer": {
+            "zug": 4.7,
+            "trailer": 6.6,
+            "real_zug": 4.7,
+            "real_trailer": 6.6
+        },
+        "voll": {
+            "zug": 12.1,
+            "trailer": 19.7,
+            "real_zug": 13.15,
+            "real_trailer": 19.15
+        },
+        "aktiv": true
+    }
+}
