@@ -8,14 +8,14 @@ st.title("🚛 LKW-Gewicht aus Volvo-Anzeige")
 DATEI = "kalibrierung.json"
 
 default_values = {
-    "leer_volvo_antrieb": 0.0,
-    "leer_real_antrieb": 0.0,
-    "voll_volvo_antrieb": 0.0,
-    "voll_real_antrieb": 0.0,
-    "leer_volvo_auflieger": 0.0,
-    "leer_real_auflieger": 0.0,
-    "voll_volvo_auflieger": 0.0,
-    "voll_real_auflieger": 0.0,
+    "leer_volvo_antrieb": 4.7,
+    "leer_real_antrieb": 7.5,
+    "voll_volvo_antrieb": 7.9,
+    "voll_real_antrieb": 11.3,
+    "leer_volvo_auflieger": 6.6,
+    "leer_real_auflieger": 8.5,
+    "voll_volvo_auflieger": 19.0,
+    "voll_real_auflieger": 27.5,
     "teilbeladung_volvo_antrieb": 0.0,
     "teilbeladung_real_antrieb": 0.0,
     "teilbeladung_volvo_auflieger": 0.0,
@@ -48,15 +48,14 @@ def berechne_kalibrierung(volvo1, real1, volvo2, real2, optional_volvo=0.0, opti
         b = real1 - a * volvo1
         return a, b
 
-kennzeichen = st.text_input("Kennzeichen eingeben:", value="")
+kennzeichen = st.text_input("Kennzeichen eingeben:", value="W-12345").strip()
 
 alle_daten = lade_daten()
 
-if kennzeichen.strip() == "":
-    st.warning("Bitte ein Kennzeichen eingeben – ohne Kennzeichen keine Kalibrierung möglich.")
-    st.stop()
-
-daten = alle_daten.get(kennzeichen, default_values)
+if kennzeichen in alle_daten:
+    daten = alle_daten[kennzeichen]
+else:
+    daten = default_values.copy()
 
 st.header("🔧 Kalibrierung – Leer, Voll, Teilbeladung")
 
@@ -92,14 +91,14 @@ if st.button("💾 Kalibrierung speichern"):
         "teilbeladung_real_auflieger": teilbeladung_real_auflieger
     }
     speichere_daten(alle_daten)
-    st.success("✅ Kalibrierung gespeichert")
+    st.success("✅ Kalibrierung für " + kennzeichen + " gespeichert.")
 
-st.header("📥 Eingabe aktueller Volvo-Werte")
+# Volvo Eingabe
+st.header("📥 Aktuelle Volvo-Werte")
 
 volvo_now_antrieb = st.number_input("Aktuelle Volvo-Anzeige – Zugmaschine", value=voll_volvo_antrieb)
 volvo_now_auflieger = st.number_input("Aktuelle Volvo-Anzeige – Auflieger", value=voll_volvo_auflieger)
 
-# Kalibrierung anwenden
 a1, b1 = berechne_kalibrierung(leer_volvo_antrieb, leer_real_antrieb, voll_volvo_antrieb, voll_real_antrieb, teilbeladung_volvo_antrieb, teilbeladung_real_antrieb)
 a2, b2 = berechne_kalibrierung(leer_volvo_auflieger, leer_real_auflieger, voll_volvo_auflieger, voll_real_auflieger, teilbeladung_volvo_auflieger, teilbeladung_real_auflieger)
 
@@ -113,7 +112,6 @@ st.write(f"🚛 Zugmaschine: **{real_antrieb:.2f} t**")
 st.write(f"🛻 Auflieger: **{real_auflieger:.2f} t**")
 st.write(f"📦 Gesamtgewicht: **{real_gesamt:.2f} t**")
 
-# Überladung prüfen
 MAX_ANTRIEBSACHSE = 11.5
 ueberladung_kg = max(0, (real_antrieb - MAX_ANTRIEBSACHSE) * 1000)
 ueberladung_prozent = max(0, (real_antrieb - MAX_ANTRIEBSACHSE) / MAX_ANTRIEBSACHSE * 100)
