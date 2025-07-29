@@ -7,7 +7,6 @@ st.title("🚛 LKW-Gewicht aus Volvo-Anzeige")
 
 DATEI = "kalibrierung.json"
 
-# Standardwerte (werden angezeigt, wenn kein Kennzeichen gespeichert ist)
 default_values = {
     "leer_volvo_antrieb": 4.7,
     "leer_real_antrieb": 7.5,
@@ -49,16 +48,8 @@ def berechne_kalibrierung(volvo1, real1, volvo2, real2, optional_volvo=0.0, opti
         b = real1 - a * volvo1
         return a, b
 
+kennzeichen = st.text_input("Kennzeichen eingeben:", value="WL782GW")
 alle_daten = lade_daten()
-alle_kennzeichen = list(alle_daten.keys())
-alle_kennzeichen.insert(0, "Neues Kennzeichen eingeben")
-
-auswahl = st.selectbox("Kennzeichen auswählen oder neu eingeben:", alle_kennzeichen)
-if auswahl == "Neues Kennzeichen eingeben":
-    kennzeichen = st.text_input("➡️ Neues Kennzeichen:", value="W-12345")
-else:
-    kennzeichen = auswahl
-
 daten = alle_daten.get(kennzeichen, default_values)
 
 st.header("🔧 Kalibrierung – Leer, Voll, Teilbeladung")
@@ -99,8 +90,8 @@ if st.button("💾 Kalibrierung speichern"):
 
 st.header("📥 Eingabe aktueller Volvo-Werte")
 
-volvo_now_antrieb = st.number_input("Aktuelle Volvo-Anzeige – Zugmaschine", value=daten["voll_volvo_antrieb"])
-volvo_now_auflieger = st.number_input("Aktuelle Volvo-Anzeige – Auflieger", value=daten["voll_volvo_auflieger"])
+volvo_now_antrieb = st.number_input("Aktuelle Volvo-Anzeige – Zugmaschine", value=voll_volvo_antrieb)
+volvo_now_auflieger = st.number_input("Aktuelle Volvo-Anzeige – Auflieger", value=voll_volvo_auflieger)
 
 a1, b1 = berechne_kalibrierung(leer_volvo_antrieb, leer_real_antrieb, voll_volvo_antrieb, voll_real_antrieb, teilbeladung_volvo_antrieb, teilbeladung_real_antrieb)
 a2, b2 = berechne_kalibrierung(leer_volvo_auflieger, leer_real_auflieger, voll_volvo_auflieger, voll_real_auflieger, teilbeladung_volvo_auflieger, teilbeladung_real_auflieger)
@@ -115,13 +106,24 @@ st.write(f"🚛 Zugmaschine: **{real_antrieb:.2f} t**")
 st.write(f"🛻 Auflieger: **{real_auflieger:.2f} t**")
 st.write(f"📦 Gesamtgewicht: **{real_gesamt:.2f} t**")
 
+# ✅ Antriebsachsen-Warnung
 MAX_ANTRIEBSACHSE = 11.5
-ueberladung_kg = max(0, (real_antrieb - MAX_ANTRIEBSACHSE) * 1000)
-ueberladung_prozent = max(0, (real_antrieb - MAX_ANTRIEBSACHSE) / MAX_ANTRIEBSACHSE * 100)
+ueberladung_antrieb_kg = max(0, (real_antrieb - MAX_ANTRIEBSACHSE) * 1000)
+ueberladung_antrieb_pct = max(0, (real_antrieb - MAX_ANTRIEBSACHSE) / MAX_ANTRIEBSACHSE * 100)
 
-if ueberladung_kg > 0:
-    st.error(f"⚠️ Antriebsachse überladen: **{ueberladung_kg:.0f} kg** / **{ueberladung_prozent:.1f} %** über dem Limit!")
+if ueberladung_antrieb_kg > 0:
+    st.error(f"⚠️ Antriebsachse überladen: **{ueberladung_antrieb_kg:.0f} kg** / **{ueberladung_antrieb_pct:.1f} %**")
 else:
     st.success("✅ Antriebsachse im grünen Bereich")
+
+# ✅ Gesamtgewicht-Warnung
+MAX_GESAMTGEWICHT = 40.0
+ueberladung_gesamt_kg = max(0, (real_gesamt - MAX_GESAMTGEWICHT) * 1000)
+ueberladung_gesamt_pct = max(0, (real_gesamt - MAX_GESAMTGEWICHT) / MAX_GESAMTGEWICHT * 100)
+
+if ueberladung_gesamt_kg > 0:
+    st.error(f"⚠️ Gesamtgewicht überladen: **{ueberladung_gesamt_kg:.0f} kg** / **{ueberladung_gesamt_pct:.1f} %**")
+else:
+    st.success("✅ Gesamtgewicht im grünen Bereich")
 
 st.info("ℹ️ Hinweis: Teilbeladung ist optional – Felder leer lassen oder 0 eingeben, wenn keine Mittelwerte vorhanden sind.")
