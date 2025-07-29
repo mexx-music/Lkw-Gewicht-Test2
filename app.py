@@ -12,12 +12,12 @@ default_values = {
     "leer_real_antrieb": 7.5,
     "voll_volvo_antrieb": 7.9,
     "voll_real_antrieb": 11.3,
+    "teilbeladung_volvo_antrieb": 0.0,
+    "teilbeladung_real_antrieb": 0.0,
     "leer_volvo_auflieger": 6.6,
     "leer_real_auflieger": 8.5,
     "voll_volvo_auflieger": 19.0,
     "voll_real_auflieger": 27.5,
-    "teilbeladung_volvo_antrieb": 0.0,
-    "teilbeladung_real_antrieb": 0.0,
     "teilbeladung_volvo_auflieger": 0.0,
     "teilbeladung_real_auflieger": 0.0
 }
@@ -27,10 +27,6 @@ def lade_daten():
         with open(DATEI, "r") as f:
             return json.load(f)
     return {}
-
-def speichere_daten(daten):
-    with open(DATEI, "w") as f:
-        json.dump(daten, f, indent=2)
 
 def berechne_kalibrierung(volvo1, real1, volvo2, real2, optional_volvo=0.0, optional_real=0.0):
     if optional_volvo > 0 and optional_real > 0:
@@ -48,14 +44,19 @@ def berechne_kalibrierung(volvo1, real1, volvo2, real2, optional_volvo=0.0, opti
         b = real1 - a * volvo1
         return a, b
 
-kennzeichen = st.text_input("Kennzeichen eingeben:", value="W-12345").strip()
+def speichere_daten(alle_daten, kennzeichen, daten):
+    alle_daten[kennzeichen] = daten
+    try:
+        with open(DATEI, "w") as f:
+            json.dump(alle_daten, f, indent=4)
+        st.success(f"✅ Kalibrierung für {kennzeichen} gespeichert.")
+    except Exception as e:
+        st.error(f"❌ Fehler beim Speichern: {e}")
 
+# Eingabe Kennzeichen
+kennzeichen = st.text_input("Kennzeichen eingeben:", value="WL782GW")
 alle_daten = lade_daten()
-
-if kennzeichen in alle_daten:
-    daten = alle_daten[kennzeichen]
-else:
-    daten = default_values.copy()
+daten = alle_daten.get(kennzeichen, default_values)
 
 st.header("🔧 Kalibrierung – Leer, Voll, Teilbeladung")
 
@@ -76,7 +77,7 @@ with st.expander("Auflieger"):
     teilbeladung_real_auflieger = st.number_input("Waage teilbeladen (Auflieger)", value=daten["teilbeladung_real_auflieger"])
 
 if st.button("💾 Kalibrierung speichern"):
-    alle_daten[kennzeichen] = {
+    neue_daten = {
         "leer_volvo_antrieb": leer_volvo_antrieb,
         "leer_real_antrieb": leer_real_antrieb,
         "voll_volvo_antrieb": voll_volvo_antrieb,
@@ -90,15 +91,14 @@ if st.button("💾 Kalibrierung speichern"):
         "teilbeladung_volvo_auflieger": teilbeladung_volvo_auflieger,
         "teilbeladung_real_auflieger": teilbeladung_real_auflieger
     }
-    speichere_daten(alle_daten)
-    st.success("✅ Kalibrierung für " + kennzeichen + " gespeichert.")
+    speichere_daten(alle_daten, kennzeichen, neue_daten)
 
-# Volvo Eingabe
-st.header("📥 Aktuelle Volvo-Werte")
-
+# Eingabe aktueller Volvo-Werte
+st.header("📥 Eingabe aktueller Volvo-Werte")
 volvo_now_antrieb = st.number_input("Aktuelle Volvo-Anzeige – Zugmaschine", value=voll_volvo_antrieb)
 volvo_now_auflieger = st.number_input("Aktuelle Volvo-Anzeige – Auflieger", value=voll_volvo_auflieger)
 
+# Kalibrierung anwenden
 a1, b1 = berechne_kalibrierung(leer_volvo_antrieb, leer_real_antrieb, voll_volvo_antrieb, voll_real_antrieb, teilbeladung_volvo_antrieb, teilbeladung_real_antrieb)
 a2, b2 = berechne_kalibrierung(leer_volvo_auflieger, leer_real_auflieger, voll_volvo_auflieger, voll_real_auflieger, teilbeladung_volvo_auflieger, teilbeladung_real_auflieger)
 
@@ -106,12 +106,13 @@ real_antrieb = volvo_now_antrieb * a1 + b1
 real_auflieger = volvo_now_auflieger * a2 + b2
 real_gesamt = real_antrieb + real_auflieger
 
+# Ergebnis anzeigen
 st.header("📊 Ergebnis")
-
 st.write(f"🚛 Zugmaschine: **{real_antrieb:.2f} t**")
 st.write(f"🛻 Auflieger: **{real_auflieger:.2f} t**")
 st.write(f"📦 Gesamtgewicht: **{real_gesamt:.2f} t**")
 
+# Überladung Antriebsachse prüfen
 MAX_ANTRIEBSACHSE = 11.5
 ueberladung_kg = max(0, (real_antrieb - MAX_ANTRIEBSACHSE) * 1000)
 ueberladung_prozent = max(0, (real_antrieb - MAX_ANTRIEBSACHSE) / MAX_ANTRIEBSACHSE * 100)
