@@ -127,3 +127,29 @@ else:
     st.success("✅ Gesamtgewicht im grünen Bereich")
 
 st.info("ℹ️ Hinweis: Teilbeladung ist optional – Felder leer lassen oder 0 eingeben, wenn keine Mittelwerte vorhanden sind.")
+# Zusatzgewichte berücksichtigen
+nutze_tank = st.checkbox("⛽ Tankfüllstand berücksichtigen?")
+tank_kg = 0
+if nutze_tank:
+    tank_prozent = st.slider("Tankfüllstand (%)", 0, 100, 100)
+    max_tankgewicht = 320  # z. B. 400 l Diesel ≈ 320 kg
+    tank_kg = max_tankgewicht * (tank_prozent / 100)
+
+nutze_paletten = st.checkbox("📦 Paletten im Palettenkorb?")
+paletten_kg = 0
+if nutze_paletten:
+    paletten_anzahl = st.slider("Anzahl Paletten im Korb", 0, 36, 0)
+    gewicht_pro_palette = 25  # kg pro Europalette
+    paletten_kg = paletten_anzahl * gewicht_pro_palette
+
+zusatzgewicht = (tank_kg + paletten_kg) / 1000  # Umrechnung in Tonnen
+real_gesamt_korrigiert = real_gesamt + zusatzgewicht
+
+st.subheader("📊 Ergebnis mit Zusatzgewichten")
+st.write(f"🚛 Zugmaschine: **{real_antrieb:.2f} t**")
+st.write(f"🛻 Auflieger: **{real_auflieger:.2f} t**")
+if nutze_tank:
+    st.write(f"🔋 Tankgewicht: **{tank_kg:.0f} kg**")
+if nutze_paletten:
+    st.write(f"📦 Palettengewicht: **{paletten_kg:.0f} kg**")
+st.write(f"📦 Gesamtgewicht (korrigiert): **{real_gesamt_korrigiert:.2f} t**")
