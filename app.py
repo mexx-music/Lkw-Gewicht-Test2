@@ -88,68 +88,65 @@ if st.button("💾 Kalibrierung speichern"):
     speichere_daten(alle_daten)
     st.success("✅ Kalibrierung gespeichert")
 
+# 📥 Eingabe aktueller Volvo-Werte
 st.header("📥 Eingabe aktueller Volvo-Werte")
 
 volvo_now_antrieb = st.number_input("Aktuelle Volvo-Anzeige – Zugmaschine", value=voll_volvo_antrieb)
 volvo_now_auflieger = st.number_input("Aktuelle Volvo-Anzeige – Auflieger", value=voll_volvo_auflieger)
 
-a1, b1 = berechne_kalibrierung(leer_volvo_antrieb, leer_real_antrieb, voll_volvo_antrieb, voll_real_antrieb, teilbeladung_volvo_antrieb, teilbeladung_real_antrieb)
-a2, b2 = berechne_kalibrierung(leer_volvo_auflieger, leer_real_auflieger, voll_volvo_auflieger, voll_real_auflieger, teilbeladung_volvo_auflieger, teilbeladung_real_auflieger)
+# ⚙️ Zusatzoptionen: Tank & Paletten
+st.header("⚙️ Zusatzoptionen (Tank & Paletten)")
 
-real_antrieb = volvo_now_antrieb * a1 + b1
-real_auflieger = volvo_now_auflieger * a2 + b2
-real_gesamt = real_antrieb + real_auflieger
-
-st.header("📊 Ergebnis")
-
-st.write(f"🚛 Zugmaschine: **{real_antrieb:.2f} t**")
-st.write(f"🛻 Auflieger: **{real_auflieger:.2f} t**")
-st.write(f"📦 Gesamtgewicht: **{real_gesamt:.2f} t**")
-
-# ✅ Antriebsachsen-Warnung
-MAX_ANTRIEBSACHSE = 11.5
-ueberladung_antrieb_kg = max(0, (real_antrieb - MAX_ANTRIEBSACHSE) * 1000)
-ueberladung_antrieb_pct = max(0, (real_antrieb - MAX_ANTRIEBSACHSE) / MAX_ANTRIEBSACHSE * 100)
-
-if ueberladung_antrieb_kg > 0:
-    st.error(f"⚠️ Antriebsachse überladen: **{ueberladung_antrieb_kg:.0f} kg** / **{ueberladung_antrieb_pct:.1f} %**")
-else:
-    st.success("✅ Antriebsachse im grünen Bereich")
-
-# ✅ Gesamtgewicht-Warnung
-MAX_GESAMTGEWICHT = 40.0
-ueberladung_gesamt_kg = max(0, (real_gesamt - MAX_GESAMTGEWICHT) * 1000)
-ueberladung_gesamt_pct = max(0, (real_gesamt - MAX_GESAMTGEWICHT) / MAX_GESAMTGEWICHT * 100)
-
-if ueberladung_gesamt_kg > 0:
-    st.error(f"⚠️ Gesamtgewicht überladen: **{ueberladung_gesamt_kg:.0f} kg** / **{ueberladung_gesamt_pct:.1f} %**")
-else:
-    st.success("✅ Gesamtgewicht im grünen Bereich")
-
-st.info("ℹ️ Hinweis: Teilbeladung ist optional – Felder leer lassen oder 0 eingeben, wenn keine Mittelwerte vorhanden sind.")
-# Zusatzgewichte berücksichtigen
 nutze_tank = st.checkbox("⛽ Tankfüllstand berücksichtigen?")
 tank_kg = 0
 if nutze_tank:
-    tank_prozent = st.slider("Tankfüllstand (%)", 0, 100, 100)
+    tank_prozent = st.slider("Tankfüllstand", 0, 100, 100, step=10)
     max_tankgewicht = 320  # z. B. 400 l Diesel ≈ 320 kg
     tank_kg = max_tankgewicht * (tank_prozent / 100)
 
-nutze_paletten = st.checkbox("📦 Paletten im Palettenkorb?")
+nutze_paletten = st.checkbox("📦 Paletten im Palettenkorb berücksichtigen?")
 paletten_kg = 0
 if nutze_paletten:
     paletten_anzahl = st.slider("Anzahl Paletten im Korb", 0, 36, 0)
     gewicht_pro_palette = 25  # kg pro Europalette
     paletten_kg = paletten_anzahl * gewicht_pro_palette
 
-zusatzgewicht = (tank_kg + paletten_kg) / 1000  # Umrechnung in Tonnen
+# 📊 Kalibrierung und Berechnung
+a1, b1 = berechne_kalibrierung(leer_volvo_antrieb, leer_real_antrieb, voll_volvo_antrieb, voll_real_antrieb, teilbeladung_volvo_antrieb, teilbeladung_real_antrieb)
+a2, b2 = berechne_kalibrierung(leer_volvo_auflieger, leer_real_auflieger, voll_volvo_auflieger, voll_real_auflieger, teilbeladung_volvo_auflieger, teilbeladung_real_auflieger)
+
+real_antrieb = volvo_now_antrieb * a1 + b1
+real_auflieger = volvo_now_auflieger * a2 + b2
+real_gesamt = real_antrieb + real_auflieger
+zusatzgewicht = (tank_kg + paletten_kg) / 1000  # in Tonnen
 real_gesamt_korrigiert = real_gesamt + zusatzgewicht
 
-st.subheader("📊 Ergebnis mit Zusatzgewichten")
+# 📈 Ergebnisanzeige
+st.header("📊 Ergebnis")
+
 st.write(f"🚛 Zugmaschine: **{real_antrieb:.2f} t**")
 st.write(f"🛻 Auflieger: **{real_auflieger:.2f} t**")
-if nutze_tank:
-    st.write(f"🔋 Tankgewicht: **{tank_kg:.0f} kg**")
-if nutze_paletten:
-    st.write(f"📦 Palettengewicht: **{paletten_kg:.0f} kg**")
-st.write(f"📦 Gesamtgewicht (korrigiert): **{real_gesamt_korrigiert:.2f} t**")
+st.write(f"⚙️ Zusatzgewicht: **{zusatzgewicht:.2f} t**")
+st.write(f"📦 Gesamtgewicht (inkl. Zusatz): **{real_gesamt_korrigiert:.2f} t**")
+
+# ⚠️ Überladungsanzeige
+MAX_ANTRIEBSACHSE = 11.5
+MAX_GESAMT = 40.0
+
+ueber_antrieb = max(0, (real_antrieb - MAX_ANTRIEBSACHSE) * 1000)
+ueber_antrieb_pct = max(0, (real_antrieb - MAX_ANTRIEBSACHSE) / MAX_ANTRIEBSACHSE * 100)
+
+ueber_gesamt = max(0, (real_gesamt_korrigiert - MAX_GESAMT) * 1000)
+ueber_gesamt_pct = max(0, (real_gesamt_korrigiert - MAX_GESAMT) / MAX_GESAMT * 100)
+
+if ueber_antrieb > 0:
+    st.error(f"⚠️ Antriebsachse überladen: **{ueber_antrieb:.0f} kg** / **{ueber_antrieb_pct:.1f}%**")
+else:
+    st.success("✅ Antriebsachse im grünen Bereich")
+
+if ueber_gesamt > 0:
+    st.error(f"⚠️ Gesamtgewicht überladen: **{ueber_gesamt:.0f} kg** / **{ueber_gesamt_pct:.1f}%**")
+else:
+    st.success("✅ Gesamtgewicht im grünen Bereich")
+
+st.info("ℹ️ Hinweis: Zusatzoptionen wie Tank & Paletten sind optional und können bei Bedarf deaktiviert werden.")
